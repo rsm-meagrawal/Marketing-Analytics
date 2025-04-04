@@ -1,0 +1,14 @@
+---
+title: "Megha Agrawal"
+image: "DSC03135.jpg"
+about:
+    template: jolla
+    links: 
+      - icon: envelope
+        href: mailto:meagrawal@ucsd.edu
+      - icon: linkedin
+        href: https://www.linkedin.com/in/meghaaagrawal
+---
+
+Hey, I'm Megha Agrawal pursuing Master's in Business Analytics at Rady School of Management.
+

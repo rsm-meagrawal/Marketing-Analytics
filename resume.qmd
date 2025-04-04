@@ -1,0 +1,6 @@
+---
+title: "Resume"
+---
+Here is my resume!
+{{< pdf resume/resume.pdf
+width=100% height=800 >}}
