@@ -1,0 +1,364 @@
+---
+title: "Machine Learning"
+author: "Megha Agrawal"
+date: today
+format: html
+jupyter: python3
+code-fold: true                 # All code blocks initially hidden
+code-tools: true                # Adds buttons to copy/download code chunks
+code-summary: "Click to view code"
+theme: flatly                   # Attractive, clean theme
+toc: true                       # Table of Contents enabled
+toc-depth: 3
+---
+
+
+## 1a. K-Means
+
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+
+# Load data
+penguins = pd.read_csv('palmer_penguins.csv')
+
+# Select correct columns based on actual names
+X = penguins[['bill_length_mm', 'flipper_length_mm']].dropna().values
+
+# Verify data loaded correctly
+print(X[:5])
+
+# Custom K-means implementation
+def custom_kmeans(X, k, max_iter=10):
+    np.random.seed(42)
+    centroids = X[np.random.choice(len(X), k, replace=False)]
+    history = [centroids.copy()]
+
+    for _ in range(max_iter):
+        distances = np.linalg.norm(X[:, np.newaxis] - centroids, axis=2)
+        clusters = np.argmin(distances, axis=1)
+
+        new_centroids = np.array([X[clusters == i].mean(axis=0) for i in range(k)])
+        history.append(new_centroids.copy())
+
+        if np.allclose(centroids, new_centroids):
+            break
+
+        centroids = new_centroids
+
+    return centroids, clusters, history
+
+# Run custom K-means
+k = 3
+centroids, clusters, history = custom_kmeans(X, k)
+
+# Plot iterations
+for i, centroid_iter in enumerate(history):
+    plt.figure(figsize=(6, 4))
+    plt.scatter(X[:, 0], X[:, 1], c='gray', alpha=0.5)
+    plt.scatter(centroid_iter[:, 0], centroid_iter[:, 1], c='red', s=100, label='Centroids')
+    plt.title(f'Iteration {i}')
+    plt.xlabel('Bill Length (mm)')
+    plt.ylabel('Flipper Length (mm)')
+    plt.legend()
+    plt.show()
+
+# Built-in KMeans comparison
+builtin_kmeans = KMeans(n_clusters=3, random_state=42).fit(X)
+
+plt.figure(figsize=(6, 4))
+plt.scatter(X[:, 0], X[:, 1], c=builtin_kmeans.labels_, cmap='viridis', alpha=0.5)
+plt.scatter(builtin_kmeans.cluster_centers_[:, 0], builtin_kmeans.cluster_centers_[:, 1],
+            c='red', s=100, marker='x')
+plt.title('Built-in KMeans Results')
+plt.xlabel('Bill Length (mm)')
+plt.ylabel('Flipper Length (mm)')
+plt.show()
+
+```
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
+# Load data
+penguins = pd.read_csv('palmer_penguins.csv')
+X = penguins[['bill_length_mm', 'flipper_length_mm']].dropna().values
+
+wcss = []
+silhouette_scores = []
+K_range = range(2, 8)
+
+# Calculate metrics for different cluster sizes
+for k in K_range:
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    labels = kmeans.fit_predict(X)
+    wcss.append(kmeans.inertia_)
+    silhouette_scores.append(silhouette_score(X, labels))
+
+# Plot Within-Cluster-Sum-of-Squares (WCSS)
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+plt.plot(K_range, wcss, marker='o')
+plt.title('Within-Cluster Sum of Squares (Elbow Method)')
+plt.xlabel('Number of clusters (K)')
+plt.ylabel('WCSS')
+
+# Plot Silhouette scores
+plt.subplot(1, 2, 2)
+plt.plot(K_range, silhouette_scores, marker='o', color='green')
+plt.title('Silhouette Scores')
+plt.xlabel('Number of clusters (K)')
+plt.ylabel('Silhouette Score')
+
+plt.tight_layout()
+plt.show()
+
+# Identify the best K
+optimal_k_silhouette = K_range[np.argmax(silhouette_scores)]
+optimal_k_wcss = 3  # Usually visually identified from the elbow method
+
+print(f"Optimal K based on silhouette score: {optimal_k_silhouette}")
+print(f"Optimal K based on elbow (WCSS): {optimal_k_wcss}")
+
+```
+## 2a. K Nearest Neighbors
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Set seed for reproducibility
+np.random.seed(42)
+
+# Generate synthetic data
+n = 100
+x1 = np.random.uniform(-3, 3, n)
+x2 = np.random.uniform(-3, 3, n)
+
+# Create boundary
+boundary = np.sin(4 * x1) + x1
+
+# Generate binary outcome based on boundary
+y = (x2 > boundary).astype(int)
+
+# Compile data into a DataFrame
+dat = pd.DataFrame({'x1': x1, 'x2': x2, 'y': y})
+
+# Plot the data with boundary
+plt.figure(figsize=(8, 6))
+plt.scatter(dat.x1, dat.x2, c=dat.y, cmap='coolwarm', edgecolor='k', alpha=0.7)
+plt.title('Synthetic Dataset with Wiggly Boundary')
+plt.xlabel('x1')
+plt.ylabel('x2')
+plt.grid(True)
+plt.show()
+```
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Set seed for reproducibility
+np.random.seed(42)
+
+# Generate synthetic data
+n = 100
+x1 = np.random.uniform(-3, 3, n)
+x2 = np.random.uniform(-3, 3, n)
+
+# Create boundary
+boundary = np.sin(4 * x1) + x1
+
+# Generate binary outcome based on boundary
+y = (x2 > boundary).astype(int)
+
+# Compile data into a DataFrame
+dat = pd.DataFrame({'x1': x1, 'x2': x2, 'y': y})
+
+# Plot the data and boundary
+plt.figure(figsize=(8, 6))
+scatter = plt.scatter(dat.x1, dat.x2, c=dat.y, cmap='coolwarm', edgecolor='k', alpha=0.7, label='Data points')
+
+# Draw the wiggly boundary
+x_boundary = np.linspace(-3, 3, 400)
+y_boundary = np.sin(4 * x_boundary) + x_boundary
+plt.plot(x_boundary, y_boundary, color='black', linewidth=2, label='Boundary')
+
+plt.title('Synthetic Dataset with Wiggly Boundary')
+plt.xlabel('x1')
+plt.ylabel('x2')
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Function to generate synthetic data
+def generate_data(seed, n=100):
+    np.random.seed(seed)
+    x1 = np.random.uniform(-3, 3, n)
+    x2 = np.random.uniform(-3, 3, n)
+    boundary = np.sin(4 * x1) + x1
+    y = (x2 > boundary).astype(int)
+    return pd.DataFrame({'x1': x1, 'x2': x2, 'y': y})
+
+# Generate training dataset
+dat_train = generate_data(seed=42)
+
+# Generate test dataset
+dat_test = generate_data(seed=99)
+
+# Plot the training dataset and boundary
+plt.figure(figsize=(8, 6))
+plt.scatter(dat_train.x1, dat_train.x2, c=dat_train.y, cmap='coolwarm', edgecolor='k', alpha=0.7, label='Training Data')
+
+# Draw the wiggly boundary
+x_boundary = np.linspace(-3, 3, 400)
+y_boundary = np.sin(4 * x_boundary) + x_boundary
+plt.plot(x_boundary, y_boundary, color='black', linewidth=2, label='Boundary')
+
+plt.title('Training Dataset with Wiggly Boundary')
+plt.xlabel('x1')
+plt.ylabel('x2')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Optionally plot the test dataset
+plt.figure(figsize=(8, 6))
+plt.scatter(dat_test.x1, dat_test.x2, c=dat_test.y, cmap='coolwarm', edgecolor='k', alpha=0.7, label='Test Data')
+plt.plot(x_boundary, y_boundary, color='black', linewidth=2, label='Boundary')
+
+plt.title('Test Dataset with Wiggly Boundary')
+plt.xlabel('x1')
+plt.ylabel('x2')
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.neighbors import KNeighborsClassifier
+
+# Function to generate synthetic data
+def generate_data(seed, n=100):
+    np.random.seed(seed)
+    x1 = np.random.uniform(-3, 3, n)
+    x2 = np.random.uniform(-3, 3, n)
+    boundary = np.sin(4 * x1) + x1
+    y = (x2 > boundary).astype(int)
+    return pd.DataFrame({'x1': x1, 'x2': x2, 'y': y})
+
+# Generate training dataset
+dat_train = generate_data(seed=42)
+X_train = dat_train[['x1', 'x2']].values
+y_train = dat_train['y'].values
+
+# Generate test dataset
+dat_test = generate_data(seed=99)
+X_test = dat_test[['x1', 'x2']].values
+y_test = dat_test['y'].values
+
+# KNN implemented manually
+def knn_predict(X_train, y_train, X_test, k=5):
+    predictions = []
+    for test_point in X_test:
+        distances = np.linalg.norm(X_train - test_point, axis=1)
+        nearest_indices = np.argsort(distances)[:k]
+        nearest_labels = y_train[nearest_indices]
+        prediction = np.bincount(nearest_labels).argmax()
+        predictions.append(prediction)
+    return np.array(predictions)
+
+# Predict manually
+y_pred_manual = knn_predict(X_train, y_train, X_test, k=5)
+
+# Verify using scikit-learn
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train, y_train)
+y_pred_sklearn = knn.predict(X_test)
+
+# Check if predictions match
+accuracy_manual = np.mean(y_pred_manual == y_test)
+accuracy_sklearn = np.mean(y_pred_sklearn == y_test)
+
+print(f"Accuracy (Manual KNN): {accuracy_manual:.2f}")
+print(f"Accuracy (sklearn KNN): {accuracy_sklearn:.2f}")
+```
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.neighbors import KNeighborsClassifier
+
+# Function to generate synthetic data
+def generate_data(seed, n=100):
+    np.random.seed(seed)
+    x1 = np.random.uniform(-3, 3, n)
+    x2 = np.random.uniform(-3, 3, n)
+    boundary = np.sin(4 * x1) + x1
+    y = (x2 > boundary).astype(int)
+    return pd.DataFrame({'x1': x1, 'x2': x2, 'y': y})
+
+# Generate training dataset
+dat_train = generate_data(seed=42)
+X_train = dat_train[['x1', 'x2']].values
+y_train = dat_train['y'].values
+
+# Generate test dataset
+dat_test = generate_data(seed=99)
+X_test = dat_test[['x1', 'x2']].values
+y_test = dat_test['y'].values
+
+# KNN implemented manually
+def knn_predict(X_train, y_train, X_test, k=5):
+    predictions = []
+    for test_point in X_test:
+        distances = np.linalg.norm(X_train - test_point, axis=1)
+        nearest_indices = np.argsort(distances)[:k]
+        nearest_labels = y_train[nearest_indices]
+        prediction = np.bincount(nearest_labels).argmax()
+        predictions.append(prediction)
+    return np.array(predictions)
+
+# Calculate accuracy for k=1 to k=30
+accuracies = []
+k_values = range(1, 31)
+for k in k_values:
+    y_pred = knn_predict(X_train, y_train, X_test, k=k)
+    accuracy = np.mean(y_pred == y_test)
+    accuracies.append(accuracy)
+
+# Plot accuracy vs k
+plt.figure(figsize=(10, 6))
+plt.plot(k_values, accuracies, marker='o')
+plt.title('KNN Accuracy for Different k Values')
+plt.xlabel('k')
+plt.ylabel('Accuracy')
+plt.grid(True)
+plt.show()
+
+# Optimal k
+optimal_k = k_values[np.argmax(accuracies)]
+print(f"Optimal k: {optimal_k} with accuracy: {max(accuracies):.2f}")
+``` 
+
+
+
+
+
+
+
+
